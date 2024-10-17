@@ -1,9 +1,12 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+
+import "./Token.sol";
 
 contract BondingCurve is Ownable {
     struct Step {
@@ -41,8 +44,8 @@ contract BondingCurve is Ownable {
     function createToken(string memory name, string memory symbol, uint256[] memory _supplies, uint256[] memory _prices) external onlyOwner {
         require(_supplies.length == _prices.length, "Supplies and prices must have the same length");
         
-        // Create new ERC20 token
-        ERC20 newToken = new ERC20(name, symbol);
+        // Create new Token contract
+        Token newToken = new Token(name, symbol, address(this));
         address tokenAddress = address(newToken);
         
         // Add token info
@@ -63,13 +66,13 @@ contract BondingCurve is Ownable {
         uint256 cost = getCost(token, amount);
         reserveToken.transferFrom(msg.sender, address(this), cost);
         tokenBond[token].reserveBalance += cost;
-        IERC20(token).transfer(msg.sender, amount);
+        Token(token).mint(msg.sender, amount);
         emit TokensPurchased(token, msg.sender, amount, cost);
     }
 
     function sell(address token, uint256 amount) external {
         uint256 refund = getRefund(token, amount);
-        IERC20(token).transferFrom(msg.sender, address(this), amount);
+        Token(token).burn(msg.sender, amount);
         tokenBond[token].reserveBalance -= refund;
         reserveToken.transfer(msg.sender, refund);
         emit TokensSold(token, msg.sender, amount, refund);
