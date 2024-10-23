@@ -1,7 +1,24 @@
+import { parseEther } from "ethers/lib/utils";
 import { ethers, deployments } from "hardhat";
+import { config } from "../config";
 
 async function main() {
   const [owner, user1, user2] = await ethers.getSigners();
+  const [deployer] = await ethers.getSigners()
+
+  const testAddress = config.metaMaskWallet
+  const targetAddress = testAddress // Replace with your address
+  const ethAmount = "1000" // Amount in ETH to send
+
+  console.log(`Sending ${ethAmount} ETH to ${targetAddress}`)
+  
+  // Send ETH
+  const tx = await deployer.sendTransaction({
+    to: targetAddress,
+    value: parseEther(ethAmount)
+  })
+
+  await tx.wait()
 
   // Retrieve deployed contract instances
   const MockONE = await deployments.get("MockOne");
@@ -14,10 +31,11 @@ async function main() {
   console.log("Using BondingCurve at:", bondingCurve.address);
 
   // Mint MockONE tokens to owner, user1, and BondingCurve contract
-  const mintAmount = ethers.utils.parseEther("10000");
+  const mintAmount = ethers.utils.parseEther("1000000000");
   await mockONE.mint(owner.address, mintAmount);
   await mockONE.mint(user1.address, mintAmount);
-  await mockONE.mint(bondingCurve.address, mintAmount);
+  // await mockONE.mint(bondingCurve.address, mintAmount);
+  await mockONE.mint(testAddress, mintAmount)
 
   // Log balances
   console.log(`BondingCurve MockONE balance: ${ethers.utils.formatEther(await mockONE.balanceOf(bondingCurve.address))}`);
@@ -25,8 +43,17 @@ async function main() {
 
   const tokenNames = ["Token1", "Token2", "Token3"];
   const tokenSymbols = ["TKN1", "TKN2", "TKN3"];
-  const supplies = [[1000, 2000, 3000], [1500, 2500, 3500], [2000, 3000, 4000]];
-  const prices = [[100, 200, 300], [150, 250, 350], [200, 300, 400]];
+  const supplies = [
+    [ethers.utils.parseEther("1000"), ethers.utils.parseEther("2000"), ethers.utils.parseEther("3000")],
+    [ethers.utils.parseEther("1500"), ethers.utils.parseEther("2500"), ethers.utils.parseEther("3500")],
+    [ethers.utils.parseEther("2000"), ethers.utils.parseEther("3000"), ethers.utils.parseEther("4000")]
+  ];
+  
+  const prices = [
+    [ethers.utils.parseEther("0.0000000001"), ethers.utils.parseEther("0.0000000002"), ethers.utils.parseEther("0.0000000003")],
+    [ethers.utils.parseEther("0.00000000015"), ethers.utils.parseEther("0.00000000025"), ethers.utils.parseEther("0.00000000035")],
+    [ethers.utils.parseEther("0.0000000002"), ethers.utils.parseEther("0.0000000003"), ethers.utils.parseEther("0.0000000004")]
+  ];
 
   for (let i = 0; i < 3; i++) {
     await bondingCurve.createToken(tokenNames[i], tokenSymbols[i], supplies[i], prices[i]);
@@ -39,15 +66,16 @@ async function main() {
 
   // Test buying tokens
   const tokenToBuy = tokenList[0].tokenAddress;
-  const amountToBuy = ethers.utils.parseEther("1");
+  const amountToBuy = "10" 
+  const paresdamountToBuy = ethers.utils.parseEther(amountToBuy); 
 
   // Approve ONE tokens for spending
   await mockONE.connect(user1).approve(bondingCurve.address, ethers.constants.MaxUint256);
   console.log("Approved MockONE for spending");
 
   // Get cost before buying
-  const cost = await bondingCurve.getCost(tokenToBuy, amountToBuy);
-  console.log(`Cost to buy ${ethers.utils.formatEther(amountToBuy)} tokens: ${ethers.utils.formatEther(cost)} ONE`);
+  const cost = await bondingCurve.getCost(tokenToBuy, paresdamountToBuy);
+  console.log(`Cost to buy ${amountToBuy} tokens: ${ethers.utils.formatEther(cost)} ONE`);
 
   // Check balances before buying
   console.log(`User1 MockONE balance before buying: ${ethers.utils.formatEther(await mockONE.balanceOf(user1.address))}`);
@@ -55,7 +83,7 @@ async function main() {
 
   // Buy tokens
   try {
-    const tx = await bondingCurve.connect(user1).buy(tokenToBuy, amountToBuy);
+    const tx = await bondingCurve.connect(user1).buy(tokenToBuy, paresdamountToBuy);
     await tx.wait();
     console.log(`Bought ${ethers.utils.formatEther(amountToBuy)} tokens for ${ethers.utils.formatEther(cost)} ONE`);
   } catch (error: any) {

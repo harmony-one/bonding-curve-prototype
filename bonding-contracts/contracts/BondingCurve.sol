@@ -24,6 +24,14 @@ contract BondingCurve is Ownable {
         string symbol;
         address tokenAddress;
     }
+    
+    struct TokenInfoWithPrice {
+        string name;
+        string symbol;
+        address tokenAddress;
+        uint256 currentPrice;
+        uint256 totalSupply;
+    }
 
     IERC20 public reserveToken;
     TokenInfo[] public tokens;
@@ -130,6 +138,40 @@ contract BondingCurve is Ownable {
 
     function getTokenList() public view returns (TokenInfo[] memory) {
         return tokens;
+    }
+
+    function getTokenListWithPrice() public view returns (TokenInfoWithPrice[] memory) {
+        uint256 tokenCount = tokens.length;
+        TokenInfoWithPrice[] memory tokenList = new TokenInfoWithPrice[](tokenCount);
+
+        for (uint256 i = 0; i < tokenCount; i++) {
+            address tokenAddress = tokens[i].tokenAddress;
+            uint256 supply = IERC20(tokenAddress).totalSupply();
+            uint256 price = getCurrentPrice(tokenAddress);
+
+            tokenList[i] = TokenInfoWithPrice(
+                tokens[i].name,
+                tokens[i].symbol,
+                tokenAddress,
+                price,
+                supply
+            );
+        }
+
+        return tokenList;
+    }
+
+    function getCurrentPrice(address token) public view returns (uint256) {
+        uint256 supply = IERC20(token).totalSupply();
+        Step[] storage steps = tokenBond[token].steps;
+        
+        for (uint256 i = 0; i < steps.length; i++) {
+            if (supply < steps[i].supply) {
+                return steps[i].price;
+            }
+        }
+        
+        return steps[steps.length - 1].price; // Return the last price if supply exceeds all steps
     }
 
     function getTopLiquidityToken() public view returns (address topToken, uint256 maxLiquidity) {
