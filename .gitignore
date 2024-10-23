@@ -28,3 +28,7 @@ coverage.json
 
 # Husky
 .husky
+
+.next
+
+.DS_Store
