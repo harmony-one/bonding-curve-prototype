@@ -6,7 +6,7 @@ import { Address, ReadContractErrorType } from 'viem';
 export type TokenInfo = {
   name: string;
   symbol: string;
-  tokenAddress: Address; // `0x${string}`;
+  tokenAddress: Address;
   currentPrice: bigint;
   totalSupply: bigint;
 };

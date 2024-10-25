@@ -1,7 +1,6 @@
 import { Address } from "viem";
 
 export default {
-  bondingCurveContractAddress: (process.env.BONDING_CURVE ?? '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512') as Address,
-  reserveTokenAddress: (process.env.BONDING_CURVE ?? '0x5FbDB2315678afecb367f032d93F642f64180aa3') as Address,
+  bondingCurveContractAddress: (process.env.BONDING_CURVE ?? '0x46eD5701b0Bbd4ABEf82C2a8091d7ec5bBB3E7a1') as Address,
+  reserveTokenAddress: (process.env.BONDING_CURVE ?? '0x3e604CAfE8a802A320595C27060ADf950eb9C494') as Address,
 }
-

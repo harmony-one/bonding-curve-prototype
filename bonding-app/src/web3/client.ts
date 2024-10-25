@@ -1,5 +1,5 @@
 import { createPublicClient, http, Chain, PublicClient, Address, getContract, Abi } from 'viem'
-import { harmonyOne, localhost } from 'viem/chains'
+import { hardhat, harmonyOne, localhost } from 'viem/chains'
 import { create } from 'zustand'
 import { harmonyTestnet } from './chains'
 import config from '@/config'
@@ -7,7 +7,7 @@ import BondingCurveABI from '../web3/abi/BondingCurve.json'
 import Erc20ABI from '../web3/abi/ERC20.json'
 
 // Define supported chains
-export const supportedChains = [harmonyOne, harmonyTestnet, localhost]
+export const supportedChains = [harmonyOne, harmonyTestnet, hardhat, localhost]
 
 // Create a store to manage the current chain
 interface ChainStore {
@@ -49,7 +49,7 @@ export function getBondingCurveABI() {
 export function getReserveAddressABI(): { address: Address, abi: Abi }  {
   return {
     address: config.reserveTokenAddress,
-    abi:  Erc20ABI as Abi
+    abi: Erc20ABI as Abi
   }
 }
 

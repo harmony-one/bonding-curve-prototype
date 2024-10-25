@@ -32,21 +32,21 @@ const config: HardhatUserConfig = {
   defaultNetwork: 'testnet',
   networks: {
     'mainnet': {
-      url: configApp.config.mainnet.networkUrl,
-      chainId: configApp.config.mainnet.chainId,
-      accounts: [configApp.config.mainnet.privateKey],
+      url: configApp.config.chains.mainnet.networkUrl,
+      chainId: configApp.config.chains.mainnet.chainId,
+      accounts: [configApp.config.chains.mainnet.privateKey],
     },
     'testnet': {
-      url: configApp.config.testnet.networkUrl, 
-      chainId: configApp.config.testnet.chainId,
-      accounts: [configApp.config.testnet.privateKey],
+      url: configApp.config.chains.testnet.networkUrl, 
+      chainId: configApp.config.chains.testnet.chainId,
+      accounts: [configApp.config.chains.testnet.privateKey],
     },
     'localhost': {
       url: "http://127.0.0.1:8545",
-      chainId: 31337,
+      chainId: 1337, // 31337,
     },
     'hardhat': {
-      chainId: 31337,
+      chainId: 1337, //31337,
       // accounts: [configApp.config.hardhat.privateKey]
     }
   },

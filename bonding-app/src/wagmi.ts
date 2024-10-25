@@ -1,11 +1,11 @@
 import { http, cookieStorage, createConfig, createStorage } from 'wagmi'
-import { harmonyOne, localhost } from 'wagmi/chains'
+import { hardhat, harmonyOne, localhost } from 'wagmi/chains'
 import { coinbaseWallet, injected, walletConnect } from 'wagmi/connectors'
 import { harmonyTestnet } from './web3/chains'
 
 export function getConfig() {
   return createConfig({
-    chains: [harmonyOne, harmonyTestnet, localhost],
+    chains: [harmonyOne, harmonyTestnet, hardhat, localhost],
     connectors: [
       injected(),
       // coinbaseWallet(),
@@ -18,7 +18,14 @@ export function getConfig() {
     transports: {
       [harmonyOne.id]: http(),
       [harmonyTestnet.id]: http(),
-      [localhost.id]: http(),
+      [hardhat.id]: http('http://127.0.0.1:8545', {
+        batch: false,
+        timeout: 10000,
+      }),
+      [localhost.id]: http('http://127.0.0.1:8545', {
+        batch: false,
+        timeout: 10000,
+      }),
     },
   })
 }

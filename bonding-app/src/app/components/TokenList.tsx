@@ -20,23 +20,54 @@ const TokenList = () => {
   if (isError) return <div>Error fetching tokens</div>;
 
   return (
-    <div>
-      <h2>Token List</h2>
-      <button onClick={() => refetch()}>Refresh All Data</button>
-      <ul>
-        {tokens?.map((token: TokenInfo) => (
-          <li key={token.tokenAddress}>
-            <TokenListItem token={token} />
-            <button onClick={() => setSelectedToken(token)}>Trade {token.symbol}</button>
-          </li>
-        ))}
-      </ul>
-      {selectedToken && (
-        <TokenTrader 
-          token={selectedToken} 
-          onClose={() => setSelectedToken(null)}
-        />
-      )}
+    <div className="container mx-auto p-4">
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Token List Section */}
+        <div className="lg:w-4/5 w-full">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">Token List</h2>
+            <button 
+              onClick={() => refetch()}
+              className="px-4 py-2 rounded-lg text-sm bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white font-medium transition-all duration-200 shadow hover:shadow-md"
+            >
+              Refresh All Data
+            </button>
+          </div>
+          <div className="bg-white rounded-xl shadow-md border border-gray-100">
+            <ul className="divide-y divide-gray-100">
+              {tokens?.map((token: TokenInfo) => (
+                <li key={token.tokenAddress} className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors">
+                  <TokenListItem token={token} />
+                  <button 
+                    onClick={() => setSelectedToken(token)}
+                    className="ml-4 px-4 py-2 rounded-lg text-sm bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white font-medium transition-all duration-200 shadow hover:shadow-md"
+                  >
+                    Trade
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        {/* Token Trader Section */}
+        <div className="lg:w-1/5 w-full">
+          <div className="sticky top-4">
+            <div className="bg-white rounded-xl shadow-md border border-gray-100 p-4">
+              {selectedToken ? (
+                <TokenTrader 
+                  token={selectedToken} 
+                  onClose={() => setSelectedToken(null)}
+                />
+              ) : (
+                <div className="text-center text-gray-500 p-4">
+                  Select a token to trade
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

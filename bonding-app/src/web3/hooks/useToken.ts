@@ -8,33 +8,42 @@ const { address: RESERVE_TOKEN_ADDRESS, abi: RESERVE_ABI } = getReserveAddressAB
 console.log('Bonding Curve Address:', BONDING_CURVE_ADDRESS)
 console.log('Reserve Token Address:', RESERVE_TOKEN_ADDRESS)
 
-export function useBuyToken(tokenAddress: string, amount: string) {
-  const { data: hash, isPending, writeContract, isError, error } = useWriteContract()
+export function useBuyToken(tokenAddress: string, quantity: string) {
+  const { data: hash, isPending, writeContract, isSuccess, isError, error } = useWriteContract()
 
   const buyTokens = () => {
-    writeContract({
-      address: BONDING_CURVE_ADDRESS,
-      abi: BONDING_CURVE_ABI,
-      functionName: 'buy',
-      args: [tokenAddress, parseEther(amount || '0')],
-    })
+    if (!quantity || !tokenAddress) return
+    try {
+      writeContract({
+        address: BONDING_CURVE_ADDRESS,
+        abi: BONDING_CURVE_ABI,
+        functionName: 'buy',
+        args: [tokenAddress, BigInt(quantity)],
+      })
+    } catch (e) {
+      console.error('Error parsing the quantity:', e)
+    }
   }
 
-  return { hash, isPending, buyTokens, isError, error }
+  return { hash, isPending, buyTokens, isError, error, isSuccess }
 }
 
-export function useSellToken(tokenAddress: string, amount: string) {
+export function useSellToken(tokenAddress: string, quantity: string) {
   const { data: hash, isPending, writeContract, isError, error } = useWriteContract()
 
   const sellTokens = () => {
-    writeContract({
+    if (!quantity || !tokenAddress) return
+    try {
+      writeContract({
       address: BONDING_CURVE_ADDRESS,
       abi: BONDING_CURVE_ABI,
       functionName: 'sell',
-      args: [tokenAddress, parseEther(amount || '0')],
+      args: [tokenAddress, BigInt(quantity || '0')],
     })
+    } catch (e) {
+      console.error('Error parsing the quantity:', e)
+    }
   }
-
   return { hash, isPending, sellTokens, isError, error }
 }
 
@@ -55,7 +64,7 @@ export function useApproveReserveToken(amount: string) {
       address: RESERVE_TOKEN_ADDRESS,
       abi: RESERVE_ABI,
       functionName: 'approve',
-      args: [BONDING_CURVE_ADDRESS, maxUint256], // Approve maximum amount
+      args: [BONDING_CURVE_ADDRESS, maxUint256], // parseEther(amount || '0')], // maxUint256], // Approve maximum amount
     })
   }
 
@@ -78,6 +87,14 @@ export function useReserveTokenAllowance(address: string | undefined) {
   }
 }
 
+export function useGetCost(tokenAddress: string, quantity: string) {
+  return useReadContract({
+    address: BONDING_CURVE_ADDRESS,
+    abi: BONDING_CURVE_ABI,
+    functionName: 'getCost',
+    args: quantity ? [tokenAddress, BigInt(quantity)] : undefined
+  })
+}
 
 // export function useApproveToken(tokenAddress: Address, amount: string) {
 //   const { data: hash, isPending, writeContract, isError, error } = useWriteContract()
