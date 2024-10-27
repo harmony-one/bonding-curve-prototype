@@ -1,13 +1,12 @@
 import { TokenInfo, useTokenList } from '@/web3/hooks/useTokenList';
 import React, { useEffect, useState } from 'react';
 import TokenListItem from './TokenListItem';
-import TokenTrader from './TokenTrader';
+import { TokenTrader } from './token-trader/TokenTrader';
+import TokenBalances from './TokenBalance';
 
 
 const TokenList = () => {
   const { data: tokens, isLoading, isError, error, refetch } = useTokenList();
-
-  console.log('FCO:::::: error', error, isError)
 
   const [selectedToken, setSelectedToken] = useState<TokenInfo | null>(null);
   
@@ -49,10 +48,9 @@ const TokenList = () => {
             </ul>
           </div>
         </div>
-
-        {/* Token Trader Section */}
-        <div className="lg:w-1/5 w-full">
-          <div className="sticky top-4">
+        <div className="lg:w-2/5 w-full">
+          <div className="sticky top-4 space-y-4">
+            <TokenBalances tokens={tokens || []} />
             <div className="bg-white rounded-xl shadow-md border border-gray-100 p-4">
               {selectedToken ? (
                 <TokenTrader 

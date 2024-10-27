@@ -42,7 +42,7 @@ async function main() {
     await mockONEContract.mint(owner.address, mintAmount);
     await mockONEContract.mint(user1.address, mintAmount);
   }
-  
+
   await mockONEContract.mint(testAddress, mintAmount)
   // Log balances
   console.log(`BondingCurve MockONE balance: ${ethers.utils.formatEther(await mockONEContract.balanceOf(bondingCurveContract.address))}`);
@@ -70,6 +70,78 @@ async function main() {
   // Get token list
   const tokenList = await bondingCurveContract.getTokenList();
   console.log("Token list:", tokenList);
+
+   // Test buying and selling tokens
+   const tokenToTest = tokenList[0].tokenAddress;
+   const amountToTest = "10"
+   const parsedAmount = ethers.utils.parseEther(amountToTest);
+ 
+   console.log("\n=== Starting Buy/Sell Test ===");
+   
+   // Approve ONE tokens for spending
+   await mockONEContract.connect(user1).approve(bondingCurveContract.address, ethers.constants.MaxUint256);
+   console.log("Approved MockONE for spending");
+ 
+   // Get cost before buying
+   const buyCost = await bondingCurveContract.getCost(tokenToTest, parsedAmount);
+   console.log(`Cost to buy ${amountToTest} tokens: ${ethers.utils.formatEther(buyCost)} ONE`);
+ 
+   // Get initial balances
+   const Token = await ethers.getContractAt("Token", tokenToTest);
+   console.log("\nInitial Balances:");
+   console.log(`User1 MockONE: ${ethers.utils.formatEther(await mockONEContract.balanceOf(user1.address))}`);
+   console.log(`User1 Token: ${ethers.utils.formatEther(await Token.balanceOf(user1.address))}`);
+   console.log(`BondingCurve MockONE: ${ethers.utils.formatEther(await mockONEContract.balanceOf(bondingCurveContract.address))}`);
+ 
+   // Buy tokens
+   try {
+     console.log("\nAttempting to buy tokens...");
+     const buyTx = await bondingCurveContract.connect(user1).buy(tokenToTest, parsedAmount);
+     await buyTx.wait();
+     console.log(`Successfully bought ${amountToTest} tokens for ${ethers.utils.formatEther(buyCost)} ONE`);
+   } catch (error: any) {
+     console.error("Error while buying tokens:", error);
+     process.exit(1);
+   }
+ 
+   // Check balances after buying
+   console.log("\nBalances after buying:");
+   console.log(`User1 MockONE: ${ethers.utils.formatEther(await mockONEContract.balanceOf(user1.address))}`);
+   console.log(`User1 Token: ${ethers.utils.formatEther(await Token.balanceOf(user1.address))}`);
+   console.log(`BondingCurve MockONE: ${ethers.utils.formatEther(await mockONEContract.balanceOf(bondingCurveContract.address))}`);
+ 
+   // Get refund amount before selling
+   const refundAmount = await bondingCurveContract.getRefund(tokenToTest, parsedAmount);
+   console.log(`\nExpected refund for selling ${amountToTest} tokens: ${ethers.utils.formatEther(refundAmount)} ONE`);
+ 
+   // Approve tokens for selling
+   await Token.connect(user1).approve(bondingCurveContract.address, parsedAmount);
+   console.log("Approved tokens for selling");
+ 
+   // Sell tokens
+   try {
+     console.log("\nAttempting to sell tokens...");
+     const sellTx = await bondingCurveContract.connect(user1).sell(tokenToTest, parsedAmount);
+     await sellTx.wait();
+     console.log(`Successfully sold ${amountToTest} tokens for ${ethers.utils.formatEther(refundAmount)} ONE`);
+   } catch (error: any) {
+     console.error("Error while selling tokens:", error);
+     if (error.data) {
+       try {
+         const decodedError = bondingCurveContract.interface.parseError(error.data);
+         console.error("Decoded error:", decodedError);
+       } catch {
+         console.error("Raw error data:", error.data);
+       }
+     }
+   }
+ 
+   // Check final balances
+   console.log("\nFinal Balances:");
+   console.log(`User1 MockONE: ${ethers.utils.formatEther(await mockONEContract.balanceOf(user1.address))}`);
+   console.log(`User1 Token: ${ethers.utils.formatEther(await Token.balanceOf(user1.address))}`);
+   console.log(`BondingCurve MockONE: ${ethers.utils.formatEther(await mockONEContract.balanceOf(bondingCurveContract.address))}`);
+ }
 
   // // Test buying tokens
   // const tokenToBuy = tokenList[0].tokenAddress;
@@ -108,7 +180,7 @@ async function main() {
   // const Token = await ethers.getContractFactory("Token");
   // const token = Token.attach(tokenToBuy);
   // console.log(`User1 Token balance after buying: ${ethers.utils.formatEther(await token.balanceOf(user1.address))}`);
-}
+// }
 
 main()
   .then(() => process.exit(0))

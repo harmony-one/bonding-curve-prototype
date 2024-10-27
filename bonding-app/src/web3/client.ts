@@ -7,7 +7,7 @@ import BondingCurveABI from '../web3/abi/BondingCurve.json'
 import Erc20ABI from '../web3/abi/ERC20.json'
 
 // Define supported chains
-export const supportedChains = [harmonyOne, harmonyTestnet, hardhat, localhost]
+export const supportedChains = [harmonyTestnet, harmonyOne, hardhat, localhost]
 
 // Create a store to manage the current chain
 interface ChainStore {
@@ -16,7 +16,7 @@ interface ChainStore {
 }
 
 export const useChainStore = create<ChainStore>((set) => ({
-  currentChain: harmonyOne, // Default to mainnet
+  currentChain: harmonyTestnet, // Default to mainnet
   setCurrentChain: (chain) => set({ currentChain: chain }),
 }))
 
@@ -31,7 +31,6 @@ export function useClient(): PublicClient {
 
 // Helper function to check if a chain is supported
 export function isSupportedChain(chainId: number): boolean {
-  console.log('SupportedChain', chainId)
   return supportedChains.some(chain => chain.id === chainId)
 }
 

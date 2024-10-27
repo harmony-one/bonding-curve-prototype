@@ -15,6 +15,8 @@ export function getConfig() {
       storage: cookieStorage,
     }),
     ssr: true,
+    // client
+    // defaultChainId: harmonyTestnet.id,
     transports: {
       [harmonyOne.id]: http(),
       [harmonyTestnet.id]: http(),

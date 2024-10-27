@@ -111,28 +111,37 @@ contract BondingCurve is Ownable {
         return cost;
     }
 
-    function getRefund(address token, uint256 amount) public view returns (uint256) {
+   function getRefund(address token, uint256 amount) public view returns (uint256) {
         uint256 supply = IERC20(token).totalSupply();
+        uint256 remainingAmount = amount;
         uint256 refund = 0;
+        uint256 currentSupply = supply;
+        
+        require(supply >= amount, "Not enough tokens to sell");
+        
         Step[] storage steps = tokenBond[token].steps;
         
-        for (uint256 i = steps.length; i > 0; i--) {
-            uint256 stepSupply = steps[i-1].supply;
-            if (supply <= stepSupply) {
-                continue; // Skip steps that are not filled
-            }
+        // Start from the highest step where we have tokens
+        for (uint256 i = 0; i < steps.length; i++) {
+            uint256 stepUpperBound = steps[i].supply;
+            uint256 stepLowerBound = i > 0 ? steps[i-1].supply : 0;
             
-            uint256 availableInStep = supply - stepSupply;
-            uint256 saleInStep = Math.min(amount, availableInStep);
+            // If we're not in this step's range, continue
+            if (currentSupply <= stepLowerBound) continue;
             
-            refund += saleInStep * steps[i-1].price;
-            amount -= saleInStep;
-            supply -= saleInStep;
+            // Calculate how many tokens are in this step
+            uint256 tokensInStep = currentSupply - stepLowerBound;
+            uint256 saleInStep = remainingAmount > tokensInStep ? tokensInStep : remainingAmount;
             
-            if (amount == 0) break;
+            // Add refund for this step
+            refund += saleInStep * steps[i].price;
+            remainingAmount -= saleInStep;
+            currentSupply -= saleInStep;
+            
+            if (remainingAmount == 0) break;
         }
         
-        require(amount == 0, "Not enough tokens to sell");
+        require(remainingAmount == 0, "Refund calculation failed");
         return refund;
     }
 
@@ -193,5 +202,18 @@ contract BondingCurve is Ownable {
         currentWinner = newWinner;
         lastUpdateTime = block.timestamp;
         emit DailyWinnerUpdated(newWinner);
+    }
+
+    function getTokenSteps(address token) public view returns (Step[] memory) {
+        return tokenBond[token].steps;
+    }
+
+    function getTokenStepCount(address token) public view returns (uint256) {
+        return tokenBond[token].steps.length;
+    }
+
+    function getTokenStepAt(address token, uint256 index) public view returns (Step memory) {
+        require(index < tokenBond[token].steps.length, "Index out of bounds");
+        return tokenBond[token].steps[index];
     }
 }

@@ -1,12 +1,10 @@
 import { useReadContract, useWriteContract } from 'wagmi';
 import { Address, parseEther, maxUint256 } from 'viem';
 import { getBondingCurveAddressABI, getReserveAddressABI } from '../client';
+import { useMemo } from 'react';
 
 const { address: BONDING_CURVE_ADDRESS, abi: BONDING_CURVE_ABI } = getBondingCurveAddressABI();
 const { address: RESERVE_TOKEN_ADDRESS, abi: RESERVE_ABI } = getReserveAddressABI()
-
-console.log('Bonding Curve Address:', BONDING_CURVE_ADDRESS)
-console.log('Reserve Token Address:', RESERVE_TOKEN_ADDRESS)
 
 export function useBuyToken(tokenAddress: string, quantity: string) {
   const { data: hash, isPending, writeContract, isSuccess, isError, error } = useWriteContract()
@@ -29,22 +27,24 @@ export function useBuyToken(tokenAddress: string, quantity: string) {
 }
 
 export function useSellToken(tokenAddress: string, quantity: string) {
-  const { data: hash, isPending, writeContract, isError, error } = useWriteContract()
+  const { data: hash, isPending, writeContract, isError, error, isSuccess } = useWriteContract()
 
   const sellTokens = () => {
     if (!quantity || !tokenAddress) return
     try {
+      const quantityBigInt = BigInt(quantity)
       writeContract({
-      address: BONDING_CURVE_ADDRESS,
-      abi: BONDING_CURVE_ABI,
-      functionName: 'sell',
-      args: [tokenAddress, BigInt(quantity || '0')],
-    })
+        address: BONDING_CURVE_ADDRESS,
+        abi: BONDING_CURVE_ABI,
+        functionName: 'sell',
+        args: [tokenAddress, quantityBigInt]
+      })
     } catch (e) {
-      console.error('Error parsing the quantity:', e)
+      console.error('Error selling tokens:', e)
     }
   }
-  return { hash, isPending, sellTokens, isError, error }
+  
+  return { hash, isPending, sellTokens, isError, error, isSuccess }
 }
 
 export function useReserveTokenBalance(address: string | undefined) {
@@ -56,10 +56,11 @@ export function useReserveTokenBalance(address: string | undefined) {
   }) as { data: bigint | undefined; isLoading: boolean; isError: boolean; refetch: () => void }
 }
 
+// for buy operation
 export function useApproveReserveToken(amount: string) {
-  const { data: hash, isPending, writeContract, isError, error } = useWriteContract()
+  const { data: hash, isPending, writeContract, isError, error, isSuccess } = useWriteContract()
 
-  const approveTokens = () => {
+  const approveToken = () => {
     writeContract({
       address: RESERVE_TOKEN_ADDRESS,
       abi: RESERVE_ABI,
@@ -68,15 +69,55 @@ export function useApproveReserveToken(amount: string) {
     })
   }
 
-  return { hash, isPending, approveTokens, isError, error }
+  return { hash, isPending, approveToken, isError, error, isSuccess }
 }
 
-export function useReserveTokenAllowance(address: string | undefined) {
+// for sell operation
+export function useApproveToken(tokenAddress: Address, amount: string) {
+  const { data: hash, isPending, writeContract, isError, error, isSuccess } =  useWriteContract()
+
+  const approveToken = () => {
+    if (!amount) return
+    try {
+      writeContract({
+        address: tokenAddress,
+        abi: RESERVE_ABI, // We can use the same ABI since approve is standard ERC20
+        functionName: 'approve',
+        args: [BONDING_CURVE_ADDRESS, BigInt(amount)],
+      })
+    } catch (e) {
+      console.error('Error approving token:', e)
+    }
+  }
+  
+  return { hash, isPending, approveToken, isError, error, isSuccess }
+}
+
+// for sell operation
+export function useTokenAllowance(tokenAddress: Address, walletAddress: string | undefined) {
+  const { data, isLoading, isError, refetch } = useReadContract({
+    address: tokenAddress,
+    abi: RESERVE_ABI,
+    functionName: 'allowance',
+    args: walletAddress ? [walletAddress, BONDING_CURVE_ADDRESS] : undefined,
+  })
+  
+  return { 
+    data: data as bigint | undefined,
+    isLoading,
+    isError,
+    refetch
+  }
+}
+
+
+// for buy operation
+export function useReserveTokenAllowance(walletAddress: string | undefined) {
   const { data, isLoading, isError, refetch } = useReadContract({
     address: RESERVE_TOKEN_ADDRESS,
     abi: RESERVE_ABI,
     functionName: 'allowance',
-    args: address ? [address, BONDING_CURVE_ADDRESS] : undefined
+    args: walletAddress ? [walletAddress, BONDING_CURVE_ADDRESS] : undefined
   })
 
   return { 
@@ -96,20 +137,25 @@ export function useGetCost(tokenAddress: string, quantity: string) {
   })
 }
 
-// export function useApproveToken(tokenAddress: Address, amount: string) {
-//   const { data: hash, isPending, writeContract, isError, error } = useWriteContract()
+export function useGetRefund(tokenAddress: string, quantity: string) {
+  const args = useMemo(() => {
+    if (!quantity || !tokenAddress) return undefined
+    try {
+      return [tokenAddress as Address, BigInt(quantity)] as const
+    } catch (e) {
+      console.error('Error formatting getRefund args:', e)
+      return undefined
+    }
+  }, [tokenAddress, quantity])
 
-//   const approveTokens = () => {
-//     writeContract({
-//       address: tokenAddress,
-//       abi: RESERVE_ABI,
-//       functionName: 'approve',
-//       args: [BONDING_CURVE_ADDRESS, parseEther(amount || '0')],
-//     })
-//   }
-
-//   return { hash, isPending, approveTokens, isError, error }
-// }
+  return useReadContract({
+    address: BONDING_CURVE_ADDRESS,
+    abi: BONDING_CURVE_ABI,
+    functionName: 'getRefund',
+    args,
+    // enabled: args !== undefined
+  })
+}
 
 export function useTokenBalance(tokenAddress: Address, address: string | undefined) {
   return useReadContract({
@@ -119,13 +165,3 @@ export function useTokenBalance(tokenAddress: Address, address: string | undefin
     args: [address],
   }) as { data: bigint | undefined; isLoading: boolean; isError: boolean; refetch: () => void }
 }
-
-// export function useTokenAllowance(tokenAddress: Address, address: string | undefined) {
-//   return useReadContract({
-//     address: tokenAddress,
-//     abi: RESERVE_ABI,
-//     functionName: 'allowance',
-//     args: [address, BONDING_CURVE_ADDRESS],
-//   }) as { data: bigint | undefined; isLoading: boolean; isError: boolean; refetch: () => void }
-// }
-
