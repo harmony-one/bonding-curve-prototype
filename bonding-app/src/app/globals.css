@@ -1,0 +1,119 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary-gradient-from: #00b4d8;
+  --primary-gradient-to: #0077be;
+  --background: #ffffff;
+}
+
+@layer base {
+  html {
+    @apply antialiased;
+  }
+
+  body {
+    @apply min-h-screen bg-white text-gray-900 font-sans;
+  }
+}
+
+@layer components {
+  /* Headings */
+  .heading-1 {
+    @apply text-3xl font-bold text-gray-900 tracking-tight;
+  }
+
+  .heading-2 {
+    @apply text-2xl font-bold text-gray-900 tracking-tight;
+  }
+
+  .heading-3 {
+    @apply text-xl font-bold text-gray-900;
+  }
+
+  .heading-4 {
+    @apply text-lg font-semibold text-gray-900;
+  }
+
+  /* Body text */
+  .text-body {
+    @apply text-base text-gray-600;
+  }
+
+  .text-body-sm {
+    @apply text-sm text-gray-600;
+  }
+
+  .text-body-xs {
+    @apply text-xs text-gray-500;
+  }
+
+  /* Special text styles */
+  .text-muted {
+    @apply text-gray-500;
+  }
+
+  .text-highlight {
+    @apply text-cyan-600 font-medium;
+  }
+
+  /* Link styles */
+  .link {
+    @apply text-cyan-600 hover:text-cyan-700 underline-offset-2 hover:underline;
+  }
+
+  /* Button text */
+  .button-text {
+    @apply text-sm font-medium;
+  }
+
+  /* Monospace text (for addresses, numbers etc) */
+  .text-mono {
+    @apply font-mono text-sm text-gray-600;
+  }
+
+  /* Form labels */
+  .form-label {
+    @apply text-sm font-medium text-gray-700;
+  }
+}
+
+/* Rest of your global styles */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type=number] {
+  -moz-appearance: textfield;
+}
+
+*:focus-visible {
+  outline: 2px solid rgba(0, 180, 216, 0.5);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: rgba(0, 180, 216, 0.1);
+}
