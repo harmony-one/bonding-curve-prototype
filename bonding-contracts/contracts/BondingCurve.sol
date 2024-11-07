@@ -6,6 +6,8 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
+import "@openzeppelin/contracts/utils/Strings.sol";
+
 import "./Token.sol";
 
 contract BondingCurve is Ownable {
@@ -17,12 +19,16 @@ contract BondingCurve is Ownable {
     struct Bond {
         uint256 reserveBalance;
         Step[] steps;
+        address creator;
+        uint256 createdAt; 
     }
 
     struct TokenInfo {
         string name;
         string symbol;
         address tokenAddress;
+        bytes32 nameHash;
+        address creator; 
     }
     
     struct TokenInfoWithPrice {
@@ -37,6 +43,9 @@ contract BondingCurve is Ownable {
     TokenInfo[] public tokens;
     mapping(address => Bond) public tokenBond;
     mapping(address => TokenInfo) public tokenInfo;
+    mapping(bytes32 => bool) private usedNameHashes;
+    mapping(address => address[]) private ownerTokens;
+
     address public currentWinner;
     uint256 public lastUpdateTime;
 
@@ -45,24 +54,59 @@ contract BondingCurve is Ownable {
     event DailyWinnerUpdated(address winner);
     event TokenAdded(address token, string name, string symbol);
 
+
     constructor(address _reserveToken) {
         reserveToken = IERC20(_reserveToken);
     }
 
+     function normalizeAndHashName(string memory name) public pure returns (bytes32) {
+        // Convert to bytes for easier manipulation
+        bytes memory nameBytes = bytes(name);
+        bytes memory normalized = new bytes(nameBytes.length);
+        
+        // Normalize to lowercase in a single pass
+        for (uint i = 0; i < nameBytes.length; i++) {
+            bytes1 char = nameBytes[i];
+            if (uint8(char) >= 65 && uint8(char) <= 90) {
+                normalized[i] = bytes1(uint8(char) + 32);
+            } else {
+                normalized[i] = char;
+            }
+        }
+        
+        // Hash the normalized name
+        return keccak256(normalized);
+    }
+
+    function isNameTaken(string memory name) public view returns (bool) {
+        bytes32 nameHash = normalizeAndHashName(name);
+        return usedNameHashes[nameHash];
+    }
+
     function createToken(string memory name, string memory symbol, uint256[] memory _supplies, uint256[] memory _prices) external onlyOwner {
         require(_supplies.length == _prices.length, "Supplies and prices must have the same length");
+        require(_supplies.length > 0, "Must provide at least one step");
+        require(bytes(name).length > 0, "Name cannot be empty");
+        require(bytes(symbol).length > 0, "Symbol cannot be empty");
+        bytes32 nameHash = normalizeAndHashName(name);
+        require(!usedNameHashes[nameHash], "Name already exists");
         
+
         // Create new Token contract
         Token newToken = new Token(name, symbol, address(this));
         address tokenAddress = address(newToken);
         
         // Add token info
-        TokenInfo memory newTokenInfo = TokenInfo(name, symbol, tokenAddress);
+        TokenInfo memory newTokenInfo = TokenInfo(name, symbol, tokenAddress, nameHash, msg.sender);
         tokens.push(newTokenInfo);
         tokenInfo[tokenAddress] = newTokenInfo;
 
+        ownerTokens[msg.sender].push(tokenAddress);
+        
         // Set up bonding curve
         Bond storage newBond = tokenBond[tokenAddress];
+        newBond.creator = msg.sender;
+        newBond.createdAt = block.timestamp; 
         for (uint256 i = 0; i < _supplies.length; i++) {
             newBond.steps.push(Step(_supplies[i], _prices[i]));
         }
@@ -170,6 +214,25 @@ contract BondingCurve is Ownable {
         return tokenList;
     }
 
+    function getOwnerTokens(address creator) public view returns (TokenInfoWithPrice[] memory) {
+        address[] storage ownerTokenAddresses = ownerTokens[creator];
+        TokenInfoWithPrice[] memory result = new TokenInfoWithPrice[](ownerTokenAddresses.length);
+        
+        for (uint i = 0; i < ownerTokenAddresses.length; i++) {
+            TokenInfo memory token = tokenInfo[ownerTokenAddresses[i]];
+            uint256 supply = IERC20(token.tokenAddress).totalSupply();
+            uint256 price = getCurrentPrice(token.tokenAddress);
+            result[i] = TokenInfoWithPrice(
+                token.name,
+                token.symbol,
+                token.tokenAddress,
+                price,
+                supply
+            );
+        }
+        return result;
+    }
+
     function getCurrentPrice(address token) public view returns (uint256) {
         uint256 supply = IERC20(token).totalSupply();
         Step[] storage steps = tokenBond[token].steps;
@@ -183,22 +246,49 @@ contract BondingCurve is Ownable {
         return steps[steps.length - 1].price; // Return the last price if supply exceeds all steps
     }
 
-    function getTopLiquidityToken() public view returns (address topToken, uint256 maxLiquidity) {
+    function getTopLiquidityToken(uint256 timestamp) public view returns (address topToken, uint256 maxLiquidity) {
+        uint256 targetDate = timestamp == 0 ? block.timestamp : timestamp;
+
         uint256 tokensLength = tokens.length;
         for (uint256 i = 0; i < tokensLength; i++) {
             address token = tokens[i].tokenAddress;
-            uint256 liquidity = tokenBond[token].reserveBalance;
-            if (liquidity > maxLiquidity) {
-                maxLiquidity = liquidity;
-                topToken = token;
+            Bond storage bond = tokenBond[token];
+            uint256 tokenCreationDay = bond.createdAt - (bond.createdAt % 1 days);
+            
+            if (tokenCreationDay == targetDate) {
+                uint256 liquidity = bond.reserveBalance;
+                if (liquidity > maxLiquidity) {
+                    maxLiquidity = liquidity;
+                    topToken = token;
+                }
             }
         }
         return (topToken, maxLiquidity);
     }
 
-    function updateDailyWinner() external onlyOwner {
+    function getTokenInfoWithPrice(address tokenAddress) public view returns (TokenInfoWithPrice memory) {
+        TokenInfo storage token = tokenInfo[tokenAddress];
+        require(token.tokenAddress != address(0), "Token not found");
+        
+        uint256 supply = IERC20(tokenAddress).totalSupply();
+        uint256 price = getCurrentPrice(tokenAddress);
+        
+        return TokenInfoWithPrice(
+            token.name,
+            token.symbol,
+            tokenAddress,
+            price,
+            supply
+        );
+    }
+
+    function getCurrentDayTopLiquidityToken() public view returns (address topToken, uint256 maxLiquidity) {
+        return getTopLiquidityToken(0);
+    }
+
+    function updateDailyWinner(uint256 timestamp) external onlyOwner {
         require(block.timestamp >= lastUpdateTime + 1 days, "24 hours have not passed");
-        (address newWinner, ) = getTopLiquidityToken();
+        (address newWinner, ) = getTopLiquidityToken(timestamp);
         currentWinner = newWinner;
         lastUpdateTime = block.timestamp;
         emit DailyWinnerUpdated(newWinner);

@@ -48,7 +48,7 @@ async function main() {
   console.log(`BondingCurve MockONE balance: ${ethers.utils.formatEther(await mockONEContract.balanceOf(bondingCurveContract.address))}`);
   console.log(`testAddress MockONE balance: ${ethers.utils.formatEther(await mockONEContract.balanceOf(testAddress))}`);
 
-  const tokenNames = ["Token1", "Token2", "Token3"];
+  const tokenNames = ["Token1", "Token1", "Token1"];
   const tokenSymbols = ["TKN1", "TKN2", "TKN3"];
   const supplies = [
     [ethers.utils.parseEther("1000"), ethers.utils.parseEther("2000"), ethers.utils.parseEther("3000")],
